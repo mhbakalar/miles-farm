@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Miles' Farm</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #2d5a1b; overflow: hidden; font-family: 'Comic Sans MS', cursive, sans-serif; }
+canvas { display: block; }
+
+#ui-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  pointer-events: auto;
+}
+
+#game-title {
+  font-size: 28px;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  font-weight: bold;
+}
+
+#controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: 3px solid #5a3a1a;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f4d03f, #e6a817);
+  color: #5a3a1a;
+  font-family: 'Comic Sans MS', cursive;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.3);
+  box-shadow: 0 3px 0 #a07010, 0 4px 8px rgba(0,0,0,0.3);
+  transition: transform 0.1s;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 0 #a07010; }
+.btn.active { background: linear-gradient(180deg, #7dcea0, #27ae60); color: #fff; border-color: #1a6b3a; box-shadow: 0 3px 0 #1a5030, 0 4px 8px rgba(0,0,0,0.3); }
+
+#seed-selector {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 10px;
+  background: rgba(90, 58, 26, 0.9);
+  padding: 15px 20px;
+  border-radius: 16px;
+  border: 3px solid #8B6914;
+  z-index: 20;
+  pointer-events: auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 90vw;
+}
+
+.seed-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 12px;
+  border: 2px solid #8B6914;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffeaa7, #fdcb6e);
+  cursor: pointer;
+  font-family: 'Comic Sans MS', cursive;
+  font-size: 12px;
+  color: #5a3a1a;
+  font-weight: bold;
+  min-width: 70px;
+}
+.seed-btn:hover { background: linear-gradient(180deg, #fff3cd, #f9e076); transform: scale(1.05); }
+.seed-btn.selected { border-color: #27ae60; background: linear-gradient(180deg, #a8e6cf, #7dcea0); }
+.seed-btn .emoji { font-size: 24px; margin-bottom: 4px; }
+
+#hat-selector {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 12px;
+  background: rgba(90, 58, 26, 0.9);
+  padding: 15px 20px;
+  border-radius: 16px;
+  border: 3px solid #8B6914;
+  z-index: 20;
+  pointer-events: auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 90vw;
+}
+
+#hat-selector .hat-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+#hat-selector .hat-section-title {
+  color: #ffeaa7;
+  font-weight: bold;
+  font-family: 'Comic Sans MS', cursive;
+  font-size: 14px;
+}
+
+#hat-selector .hat-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+#animal-selector {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 10px;
+  background: rgba(90, 58, 26, 0.9);
+  padding: 15px 20px;
+  border-radius: 16px;
+  border: 3px solid #8B6914;
+  z-index: 20;
+  pointer-events: auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 90vw;
+}
+
+#info-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(90, 58, 26, 0.9);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid #8B6914;
+  color: #ffeaa7;
+  font-size: 13px;
+  z-index: 15;
+  pointer-events: auto;
+  max-width: 220px;
+}
+#info-panel div { margin: 3px 0; white-space: pre-wrap; }
+
+#scene-selector {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(90, 58, 26, 0.9);
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #8B6914;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+#vehicle-selector {
+  position: fixed;
+  top: 60px;
+  left: 20px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(90, 58, 26, 0.9);
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #8B6914;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.speech-bubble {
+  position: fixed;
+  background: white;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: 'Comic Sans MS', cursive;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  max-width: 200px;
+}
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 20px;
+  border-width: 10px 8px 0;
+  border-style: solid;
+  border-color: white transparent transparent;
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="ui-overlay">
+  <div id="top-bar">
+    <div id="game-title">Miles' Farm</div>
+    <div id="controls">
+      <button class="btn" onclick="toggleScenes()">Scenes</button>
+      <button class="btn" onclick="toggleVehicles()">Vehicles</button>
+      <button class="btn" id="btn-plant" onclick="setTool('plant')">Plant</button>
+      <button class="btn" id="btn-water" onclick="setTool('water')">Water</button>
+      <button class="btn" id="btn-harvest" onclick="setTool('harvest')">Harvest</button>
+      <button class="btn" id="btn-animal" onclick="setTool('animal')">Add Animal</button>
+      <button class="btn" onclick="toggleHats()">Hats</button>
+      <button class="btn" onclick="toggleSound()">Sound</button>
+    </div>
+  </div>
+</div>
+
+<div id="seed-selector"></div>
+<div id="animal-selector"></div>
+<div id="hat-selector"></div>
+<div id="scene-selector"></div>
+<div id="vehicle-selector"></div>
+
+<div id="info-panel">
+  <div id="info-weather">Weather: Sunny</div>
+  <div id="info-crops">Crops: 0</div>
+  <div id="info-harvested">Harvested: 0</div>
+  <div id="info-vehicle">Walking</div>
+</div>
+
+<div class="speech-bubble" id="bubble-ted"></div>
+<div class="speech-bubble" id="bubble-midge"></div>
+<div class="speech-bubble" id="bubble-lehvi"></div>
+
+<script>
+// ============ AUDIO SYSTEM ============
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let soundEnabled = true;
+
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, duration, type='sine', volume=0.15) {
+  if (!soundEnabled || !audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+function playRooster() {
+  ensureAudio();
+  // Cock-a-doodle-doo sound approximation
+  setTimeout(() => playTone(800, 0.15, 'sawtooth', 0.08), 0);
+  setTimeout(() => playTone(1000, 0.12, 'sawtooth', 0.08), 150);
+  setTimeout(() => playTone(1200, 0.1, 'sawtooth', 0.08), 270);
+  setTimeout(() => playTone(900, 0.4, 'sawtooth', 0.06), 370);
+}
+
+function playMoo() {
+  ensureAudio();
+  playTone(150, 0.6, 'sawtooth', 0.06);
+  setTimeout(() => playTone(120, 0.8, 'sawtooth', 0.05), 600);
+}
+
+function playOink() {
+  ensureAudio();
+  playTone(400, 0.1, 'square', 0.04);
+  setTimeout(() => playTone(500, 0.15, 'square', 0.04), 120);
+}
+
+function playBark() {
+  ensureAudio();
+  playTone(600, 0.08, 'square', 0.06);
+  setTimeout(() => playTone(700, 0.1, 'square', 0.06), 100);
+}
+
+function playPlant() {
+  ensureAudio();
+  playTone(440, 0.1, 'sine', 0.1);
+  setTimeout(() => playTone(554, 0.1, 'sine', 0.1), 100);
+  setTimeout(() => playTone(659, 0.15, 'sine', 0.1), 200);
+}
+
+function playWater() {
+  ensureAudio();
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => playTone(800 + Math.random()*400, 0.05, 'sine', 0.04), i * 50);
+  }
+}
+
+function playHarvest() {
+  ensureAudio();
+  playTone(523, 0.1, 'sine', 0.1);
+  setTimeout(() => playTone(659, 0.1, 'sine', 0.1), 100);
+  setTimeout(() => playTone(784, 0.1, 'sine', 0.1), 200);
+  setTimeout(() => playTone(1047, 0.2, 'sine', 0.1), 300);
+}
+
+function playRain() {
+  if (!soundEnabled || !audioCtx) return;
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      const bufferSize = audioCtx.sampleRate * 0.3;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let j = 0; j < bufferSize; j++) data[j] = (Math.random() * 2 - 1) * 0.02;
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 3000;
+      source.connect(filter);
+      filter.connect(audioCtx.destination);
+      source.start();
+    }, i * 300);
+  }
+}
+
+function playTractorEngine() {
+  ensureAudio();
+  playTone(80, 0.2, 'sawtooth', 0.03);
+  setTimeout(() => playTone(85, 0.2, 'sawtooth', 0.03), 200);
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+}
+
+// ============ CANVAS SETUP ============
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ============ GAME STATE ============
+const TILE = 48;
+let camera = { x: 0, y: 0 };
+let currentTool = null;
+let selectedSeed = 'wheat';
+let harvestedCount = 0;
+let harvestedCrops = {}; // { wheat: 3, corn: 1, ... }
+let currentVehicle = 'walking';
+let showScenes = false;
+let showVehicles = false;
+let showHats = false;
+
+// Hats
+const HATS = {
+  none:       { name: 'No Hat',       emoji: '---' },
+  cowboy:     { name: 'Cowboy',       emoji: '🤠' },
+  straw:      { name: 'Straw Hat',    emoji: '👒' },
+  cap:        { name: 'Cap',          emoji: '🧢' },
+  tophat:     { name: 'Top Hat',      emoji: '🎩' },
+  crown:      { name: 'Crown',        emoji: '👑' },
+  beanie:     { name: 'Beanie',       emoji: '🧶' },
+  witch:      { name: 'Witch Hat',    emoji: '🧙' },
+  santa:      { name: 'Santa Hat',    emoji: '🎅' },
+  party:      { name: 'Party Hat',    emoji: '🥳' },
+  helmet:     { name: 'Helmet',       emoji: '⛑️' },
+  pirate:     { name: 'Pirate',       emoji: '🏴‍☠️' },
+};
+let milesHat = 'none';
+let lehviHat = 'none';
+
+// Crop types
+const CROPS = {
+  wheat:      { name: 'Wheat',      emoji: '🌾', color: '#f4d03f', growTime: 8000, stages: ['🌱','🌿','🌾','🌾'] },
+  corn:       { name: 'Corn',       emoji: '🌽', color: '#f39c12', growTime: 12000, stages: ['🌱','🌿','🌽','🌽'] },
+  carrot:     { name: 'Carrot',     emoji: '🥕', color: '#e67e22', growTime: 7000, stages: ['🌱','🌿','🥕','🥕'] },
+  tomato:     { name: 'Tomato',     emoji: '🍅', color: '#e74c3c', growTime: 10000, stages: ['🌱','🌿','🍅','🍅'] },
+  potato:     { name: 'Potato',     emoji: '🥔', color: '#a0825a', growTime: 9000, stages: ['🌱','🌿','🥔','🥔'] },
+  strawberry: { name: 'Strawberry', emoji: '🍓', color: '#ff6b81', growTime: 6000, stages: ['🌱','🌿','🍓','🍓'] },
+  pumpkin:    { name: 'Pumpkin',    emoji: '🎃', color: '#f57c00', growTime: 15000, stages: ['🌱','🌿','🎃','🎃'] },
+  sunflower:  { name: 'Sunflower',  emoji: '🌻', color: '#ffd700', growTime: 11000, stages: ['🌱','🌿','🌻','🌻'] },
+  lettuce:    { name: 'Lettuce',    emoji: '🥬', color: '#66bb6a', growTime: 5000, stages: ['🌱','🌿','🥬','🥬'] },
+  watermelon: { name: 'Watermelon', emoji: '🍉', color: '#4caf50', growTime: 14000, stages: ['🌱','🌿','🍉','🍉'] },
+  blueberry:  { name: 'Blueberry',  emoji: '🫐', color: '#5c6bc0', growTime: 8000, stages: ['🌱','🌿','🫐','🫐'] },
+  pepper:     { name: 'Pepper',     emoji: '🌶️', color: '#d32f2f', growTime: 9000, stages: ['🌱','🌿','🌶️','🌶️'] },
+};
+
+// Animal types
+const ANIMAL_TYPES = {
+  pig:     { name: 'Pig',     emoji: '🐷' },
+  cow:     { name: 'Cow',     emoji: '🐄' },
+  sheep:   { name: 'Sheep',   emoji: '🐑' },
+  chicken: { name: 'Chicken', emoji: '🐔' },
+  rooster: { name: 'Rooster', emoji: '🐓' },
+  horse:   { name: 'Horse',   emoji: '🐴' },
+  goat:    { name: 'Goat',    emoji: '🐐' },
+  duck:    { name: 'Duck',    emoji: '🦆' },
+};
+let selectedAnimal = 'pig';
+
+// Farm scenes
+const SCENES = [
+  { name: 'Green Meadow', grass: '#7ec850', dirt: '#c4a265', sky: '#87ceeb' },
+  { name: 'Autumn Farm', grass: '#a8b820', dirt: '#b8956a', sky: '#d4a76a' },
+  { name: 'Spring Garden', grass: '#90d468', dirt: '#d4b896', sky: '#b0d4f1' },
+  { name: 'Summer Fields', grass: '#5ea832', dirt: '#c9a84c', sky: '#5cacee' },
+];
+let currentScene = 0;
+
+// Map grid
+const MAP_W = 30;
+const MAP_H = 24;
+let tiles = [];
+let crops = [];
+let animals = [];
+let foodBowls = []; // { tx, ty, type: 'food'|'water', amount: 5 }
+let particles = [];
+
+// Weather
+let weather = { type: 'sunny', timer: 0, raindrops: [], cloudX: 100 };
+
+// Farmer
+let farmer = {
+  x: 7 * TILE, y: 10 * TILE,
+  dir: 0, // 0=down,1=left,2=right,3=up
+  frame: 0, frameTimer: 0,
+  speed: 2.5
+};
+
+// Ted the green tractor (wanders around)
+let ted = {
+  x: 12 * TILE, y: 8 * TILE,
+  dir: 0, speed: 0.8,
+  moveTimer: 0, targetX: 12*TILE, targetY: 8*TILE,
+  sayTimer: 0, saying: ''
+};
+
+// Midge the small dog
+let midge = {
+  x: 8 * TILE, y: 11 * TILE,
+  dir: 0, speed: 1.5, frame: 0, frameTimer: 0,
+  followDist: TILE * 2.5,
+  barkTimer: 0, saying: ''
+};
+
+// Lehvi - girl with long hair and a braid
+let lehvi = {
+  x: 10 * TILE, y: 10 * TILE,
+  dir: 0, speed: 1.2, frame: 0, frameTimer: 0,
+  moveTimer: 0, targetX: 10*TILE, targetY: 10*TILE,
+  sayTimer: 0, saying: '',
+  activity: 'wander' // wander, water, follow
+};
+
+// Keys
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; ensureAudio(); });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// ============ INIT MAP ============
+function initMap() {
+  tiles = [];
+  crops = [];
+  for (let y = 0; y < MAP_H; y++) {
+    tiles[y] = [];
+    for (let x = 0; x < MAP_W; x++) {
+      // Border is fence
+      if (x === 0 || y === 0 || x === MAP_W-1 || y === MAP_H-1) {
+        tiles[y][x] = 'fence';
+      }
+      // Barn area
+      else if (x >= 2 && x <= 5 && y >= 1 && y <= 3) {
+        tiles[y][x] = 'barn';
+      }
+      // Pond
+      else if (x >= 22 && x <= 25 && y >= 15 && y <= 18) {
+        tiles[y][x] = 'water';
+      }
+      // Animal pen area
+      else if (x >= 20 && x <= 27 && y >= 2 && y <= 6) {
+        tiles[y][x] = 'pen';
+      }
+      // Dirt field areas
+      else if (x >= 4 && x <= 14 && y >= 6 && y <= 18) {
+        tiles[y][x] = 'dirt';
+      }
+      else if (x >= 16 && x <= 19 && y >= 8 && y <= 18) {
+        tiles[y][x] = 'dirt';
+      }
+      // Paths
+      else if (x >= 2 && x <= 3 && y >= 4 && y <= 20) {
+        tiles[y][x] = 'path';
+      }
+      else if (y >= 4 && y <= 5 && x >= 2 && x <= 20) {
+        tiles[y][x] = 'path';
+      }
+      else if (x === 15 && y >= 6 && y <= 18) {
+        tiles[y][x] = 'path';
+      }
+      else {
+        tiles[y][x] = 'grass';
+      }
+    }
+  }
+
+  // Some starting animals
+  animals = [
+    { type: 'chicken', x: 22*TILE, y: 3*TILE, dir: 0, timer: 0, frame: 0 },
+    { type: 'chicken', x: 24*TILE, y: 4*TILE, dir: 2, timer: 0, frame: 0 },
+    { type: 'rooster', x: 23*TILE, y: 3*TILE, dir: 0, timer: 0, frame: 0, crowTimer: 0 },
+  ];
+}
+initMap();
+
+// Build seed selector UI
+function buildSeedSelector() {
+  const sel = document.getElementById('seed-selector');
+  sel.innerHTML = '';
+  for (const [key, crop] of Object.entries(CROPS)) {
+    const btn = document.createElement('div');
+    btn.className = 'seed-btn' + (key === selectedSeed ? ' selected' : '');
+    btn.innerHTML = `<span class="emoji">${crop.emoji}</span>${crop.name}`;
+    btn.onclick = () => {
+      selectedSeed = key;
+      buildSeedSelector();
+    };
+    sel.appendChild(btn);
+  }
+}
+buildSeedSelector();
+
+// Build animal selector UI
+function buildAnimalSelector() {
+  const sel = document.getElementById('animal-selector');
+  sel.innerHTML = '';
+  for (const [key, animal] of Object.entries(ANIMAL_TYPES)) {
+    const btn = document.createElement('div');
+    btn.className = 'seed-btn' + (key === selectedAnimal ? ' selected' : '');
+    btn.innerHTML = `<span class="emoji">${animal.emoji}</span>${animal.name}`;
+    btn.onclick = () => {
+      selectedAnimal = key;
+      buildAnimalSelector();
+    };
+    sel.appendChild(btn);
+  }
+}
+buildAnimalSelector();
+
+// Build scene selector
+function buildSceneSelector() {
+  const sel = document.getElementById('scene-selector');
+  sel.innerHTML = '<div style="color:#ffeaa7;font-weight:bold;margin-bottom:6px;">Farm Scenes:</div>';
+  SCENES.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn' + (i === currentScene ? ' active' : '');
+    btn.textContent = s.name;
+    btn.style.fontSize = '12px';
+    btn.onclick = () => { currentScene = i; buildSceneSelector(); };
+    sel.appendChild(btn);
+  });
+}
+buildSceneSelector();
+
+// Build vehicle selector
+function buildVehicleSelector() {
+  const sel = document.getElementById('vehicle-selector');
+  sel.innerHTML = '<div style="color:#ffeaa7;font-weight:bold;margin-bottom:6px;">Vehicles:</div>';
+  const vehicles = [
+    { id: 'walking', name: 'Walk', emoji: '🚶' },
+    { id: 'tractor', name: 'Blue Tractor', emoji: '🚜' },
+    { id: 'harvester', name: 'Harvester', emoji: '🌾' },
+    { id: 'truck', name: 'Farm Truck', emoji: '🛻' },
+  ];
+  vehicles.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'btn' + (v.id === currentVehicle ? ' active' : '');
+    btn.textContent = v.emoji + ' ' + v.name;
+    btn.style.fontSize = '12px';
+    btn.onclick = () => {
+      currentVehicle = v.id;
+      farmer.speed = v.id === 'walking' ? 2.5 : v.id === 'harvester' ? 2 : 3.5;
+      buildVehicleSelector();
+      document.getElementById('info-vehicle').textContent = v.id === 'walking' ? 'Walking' : v.name;
+    };
+    sel.appendChild(btn);
+  });
+}
+buildVehicleSelector();
+
+function toggleScenes() {
+  showScenes = !showScenes;
+  document.getElementById('scene-selector').style.display = showScenes ? 'flex' : 'none';
+  if (showScenes) { showVehicles = false; showHats = false; document.getElementById('vehicle-selector').style.display = 'none'; document.getElementById('hat-selector').style.display = 'none'; }
+}
+function toggleVehicles() {
+  showVehicles = !showVehicles;
+  document.getElementById('vehicle-selector').style.display = showVehicles ? 'flex' : 'none';
+  if (showVehicles) { showScenes = false; showHats = false; document.getElementById('scene-selector').style.display = 'none'; document.getElementById('hat-selector').style.display = 'none'; }
+}
+function toggleHats() {
+  showHats = !showHats;
+  document.getElementById('hat-selector').style.display = showHats ? 'flex' : 'none';
+  if (showHats) { showScenes = false; showVehicles = false; document.getElementById('scene-selector').style.display = 'none'; document.getElementById('vehicle-selector').style.display = 'none'; }
+}
+
+// Build hat selector UI
+function buildHatSelector() {
+  const sel = document.getElementById('hat-selector');
+  sel.innerHTML = '';
+
+  // Miles section
+  const milesSection = document.createElement('div');
+  milesSection.className = 'hat-section';
+  milesSection.innerHTML = '<div class="hat-section-title">Miles\' Hat</div>';
+  const milesRow = document.createElement('div');
+  milesRow.className = 'hat-row';
+  for (const [key, hat] of Object.entries(HATS)) {
+    const btn = document.createElement('div');
+    btn.className = 'seed-btn' + (key === milesHat ? ' selected' : '');
+    btn.innerHTML = `<span class="emoji">${hat.emoji}</span>${hat.name}`;
+    btn.onclick = () => { milesHat = key; buildHatSelector(); };
+    milesRow.appendChild(btn);
+  }
+  milesSection.appendChild(milesRow);
+  sel.appendChild(milesSection);
+
+  // Lehvi section
+  const lehviSection = document.createElement('div');
+  lehviSection.className = 'hat-section';
+  lehviSection.innerHTML = '<div class="hat-section-title">Lehvi\'s Hat</div>';
+  const lehviRow = document.createElement('div');
+  lehviRow.className = 'hat-row';
+  for (const [key, hat] of Object.entries(HATS)) {
+    const btn = document.createElement('div');
+    btn.className = 'seed-btn' + (key === lehviHat ? ' selected' : '');
+    btn.innerHTML = `<span class="emoji">${hat.emoji}</span>${hat.name}`;
+    btn.onclick = () => { lehviHat = key; buildHatSelector(); };
+    lehviRow.appendChild(btn);
+  }
+  lehviSection.appendChild(lehviRow);
+  sel.appendChild(lehviSection);
+}
+buildHatSelector();
+
+function setTool(tool) {
+  if (currentTool === tool) { currentTool = null; } else { currentTool = tool; }
+  document.getElementById('btn-plant').classList.toggle('active', currentTool === 'plant');
+  document.getElementById('btn-water').classList.toggle('active', currentTool === 'water');
+  document.getElementById('btn-harvest').classList.toggle('active', currentTool === 'harvest');
+  document.getElementById('btn-animal').classList.toggle('active', currentTool === 'animal');
+  document.getElementById('seed-selector').style.display = currentTool === 'plant' ? 'flex' : 'none';
+  document.getElementById('animal-selector').style.display = currentTool === 'animal' ? 'flex' : 'none';
+}
+
+// ============ CLICK TO ACT ============
+canvas.addEventListener('click', (e) => {
+  ensureAudio();
+  const worldX = e.clientX + camera.x;
+  const worldY = e.clientY + camera.y;
+  const tx = Math.floor(worldX / TILE);
+  const ty = Math.floor(worldY / TILE);
+
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return;
+
+  if (currentTool === 'plant' && tiles[ty][tx] === 'dirt') {
+    // Check no crop here already
+    if (!crops.find(c => c.tx === tx && c.ty === ty)) {
+      crops.push({ tx, ty, type: selectedSeed, growth: 0, watered: false, waterLevel: 0, planted: Date.now() });
+      playPlant();
+      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#8B4513', 5);
+    }
+  }
+  else if (currentTool === 'water') {
+    const crop = crops.find(c => c.tx === tx && c.ty === ty);
+    if (crop && crop.growth < 3) {
+      crop.watered = true;
+      crop.waterLevel = Math.min(crop.waterLevel + 1, 3);
+      playWater();
+      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#3498db', 8);
+    }
+  }
+  else if (currentTool === 'harvest') {
+    const idx = crops.findIndex(c => c.tx === tx && c.ty === ty && c.growth >= 3);
+    if (idx >= 0) {
+      harvestedCount++;
+      const htype = crops[idx].type;
+      harvestedCrops[htype] = (harvestedCrops[htype] || 0) + 1;
+      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, CROPS[htype].color, 10);
+      crops.splice(idx, 1);
+      playHarvest();
+    }
+  }
+  else if (currentTool === 'animal') {
+    const t = tiles[ty][tx];
+    if (t === 'pen' || t === 'grass' || t === 'dirt' || t === 'path') {
+      animals.push({ type: selectedAnimal, x: tx * TILE, y: ty * TILE, dir: Math.floor(Math.random()*4), timer: 0, frame: 0 });
+      if (selectedAnimal === 'pig') playOink();
+      else if (selectedAnimal === 'cow') playMoo();
+      else if (selectedAnimal === 'rooster') playRooster();
+      else playPlant();
+      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#ffeaa7', 6);
+    }
+  }
+});
+
+// ============ PARTICLES ============
+function addParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 3,
+      vy: (Math.random() - 0.5) * 3 - 1,
+      life: 30 + Math.random() * 20,
+      color, size: 2 + Math.random() * 3
+    });
+  }
+}
+
+// ============ UPDATE ============
+let lastTime = 0;
+let ambientTimer = 0;
+let engineTimer = 0;
+
+function update(dt) {
+  const scene = SCENES[currentScene];
+
+  // Farmer movement
+  let dx = 0, dy = 0;
+  if (keys['arrowleft'] || keys['a']) { dx = -1; farmer.dir = 1; }
+  if (keys['arrowright'] || keys['d']) { dx = 1; farmer.dir = 2; }
+  if (keys['arrowup'] || keys['w']) { dy = -1; farmer.dir = 3; }
+  if (keys['arrowdown'] || keys['s']) { dy = 1; farmer.dir = 0; }
+
+  if (dx !== 0 || dy !== 0) {
+    const len = Math.sqrt(dx*dx + dy*dy);
+    dx /= len; dy /= len;
+    const nx = farmer.x + dx * farmer.speed;
+    const ny = farmer.y + dy * farmer.speed;
+    const ntx = Math.floor((nx + TILE/2) / TILE);
+    const nty = Math.floor((ny + TILE/2) / TILE);
+    if (ntx >= 1 && ntx < MAP_W-1 && nty >= 1 && nty < MAP_H-1 && tiles[nty][ntx] !== 'fence' && tiles[nty][ntx] !== 'water') {
+      farmer.x = nx;
+      farmer.y = ny;
+    }
+    farmer.frameTimer += dt;
+    if (farmer.frameTimer > 150) { farmer.frame = (farmer.frame + 1) % 4; farmer.frameTimer = 0; }
+
+    // Tractor engine sound
+    if (currentVehicle !== 'walking') {
+      engineTimer += dt;
+      if (engineTimer > 500) { playTractorEngine(); engineTimer = 0; }
+    }
+  }
+
+  // Camera follow
+  camera.x = farmer.x - canvas.width / 2 + TILE / 2;
+  camera.y = farmer.y - canvas.height / 2 + TILE / 2;
+  camera.x = Math.max(0, Math.min(camera.x, MAP_W * TILE - canvas.width));
+  camera.y = Math.max(0, Math.min(camera.y, MAP_H * TILE - canvas.height));
+
+  // Ted the tractor AI
+  ted.moveTimer += dt;
+  if (ted.moveTimer > 3000) {
+    ted.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
+    ted.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
+    ted.moveTimer = 0;
+  }
+  const tdx = ted.targetX - ted.x;
+  const tdy = ted.targetY - ted.y;
+  const tdist = Math.sqrt(tdx*tdx + tdy*tdy);
+  if (tdist > 5) {
+    ted.x += (tdx/tdist) * ted.speed;
+    ted.y += (tdy/tdist) * ted.speed;
+    if (Math.abs(tdx) > Math.abs(tdy)) ted.dir = tdx > 0 ? 2 : 1;
+    else ted.dir = tdy > 0 ? 0 : 3;
+  }
+  ted.sayTimer -= dt;
+  if (ted.sayTimer <= 0 && Math.random() < 0.002) {
+    const sayings = ["Vroom vroom!", "I love farming!", "What a nice day!", "Let's go!", "Beep beep!", "I'm Ted!"];
+    ted.saying = sayings[Math.floor(Math.random() * sayings.length)];
+    ted.sayTimer = 3000;
+  }
+  if (ted.sayTimer <= 0) ted.saying = '';
+
+  // Midge the dog follows farmer
+  const mdx = farmer.x - midge.x;
+  const mdy = farmer.y - midge.y;
+  const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
+  if (mdist > midge.followDist) {
+    midge.x += (mdx/mdist) * midge.speed;
+    midge.y += (mdy/mdist) * midge.speed;
+    if (Math.abs(mdx) > Math.abs(mdy)) midge.dir = mdx > 0 ? 2 : 1;
+    else midge.dir = mdy > 0 ? 0 : 3;
+    midge.frameTimer += dt;
+    if (midge.frameTimer > 120) { midge.frame = (midge.frame + 1) % 4; midge.frameTimer = 0; }
+  }
+  midge.barkTimer -= dt;
+  if (midge.barkTimer <= 0 && Math.random() < 0.001) {
+    midge.saying = ['Woof!', 'Arf!', 'Yip!', '*wags tail*', '*happy panting*'][Math.floor(Math.random()*5)];
+    midge.barkTimer = 4000;
+    playBark();
+  }
+  if (midge.barkTimer <= 0) midge.saying = '';
+
+  // Lehvi AI - she wanders around the farm, sometimes waters crops, sometimes follows farmer
+  lehvi.moveTimer += dt;
+  if (lehvi.moveTimer > 4000) {
+    // Pick new activity
+    const roll = Math.random();
+    if (roll < 0.3) {
+      lehvi.activity = 'wander';
+      lehvi.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
+      lehvi.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
+    } else if (roll < 0.5) {
+      lehvi.activity = 'follow';
+    } else if (roll < 0.7 && animals.length > 0) {
+      // Feed animals - go near animals and place food/water
+      const animal = animals[Math.floor(Math.random() * animals.length)];
+      lehvi.activity = 'feed';
+      lehvi.targetX = animal.x;
+      lehvi.targetY = animal.y;
+    } else {
+      // Try to water an unwatered crop
+      const unwatered = crops.filter(c => !c.watered && c.growth < 3);
+      if (unwatered.length > 0) {
+        const crop = unwatered[Math.floor(Math.random() * unwatered.length)];
+        lehvi.activity = 'water';
+        lehvi.targetX = crop.tx * TILE;
+        lehvi.targetY = crop.ty * TILE;
+      } else {
+        lehvi.activity = 'wander';
+        lehvi.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
+        lehvi.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
+      }
+    }
+    lehvi.moveTimer = 0;
+  }
+
+  let lehviTargetX = lehvi.targetX;
+  let lehviTargetY = lehvi.targetY;
+  if (lehvi.activity === 'follow') {
+    lehviTargetX = farmer.x + TILE * 1.5;
+    lehviTargetY = farmer.y + TILE * 0.5;
+  }
+
+  const ldx = lehviTargetX - lehvi.x;
+  const ldy = lehviTargetY - lehvi.y;
+  const ldist = Math.sqrt(ldx*ldx + ldy*ldy);
+  if (ldist > 8) {
+    lehvi.x += (ldx/ldist) * lehvi.speed;
+    lehvi.y += (ldy/ldist) * lehvi.speed;
+    if (Math.abs(ldx) > Math.abs(ldy)) lehvi.dir = ldx > 0 ? 2 : 1;
+    else lehvi.dir = ldy > 0 ? 0 : 3;
+    lehvi.frameTimer += dt;
+    if (lehvi.frameTimer > 150) { lehvi.frame = (lehvi.frame + 1) % 4; lehvi.frameTimer = 0; }
+  } else if (lehvi.activity === 'water') {
+    // Water the crop she arrived at
+    const tx = Math.floor((lehvi.x + TILE/2) / TILE);
+    const ty = Math.floor((lehvi.y + TILE/2) / TILE);
+    const crop = crops.find(c => c.tx === tx && c.ty === ty && !c.watered && c.growth < 3);
+    if (crop) {
+      crop.watered = true;
+      crop.waterLevel = Math.min(crop.waterLevel + 1, 3);
+      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#3498db', 6);
+      playWater();
+    }
+    lehvi.activity = 'wander';
+  } else if (lehvi.activity === 'feed') {
+    // Place food or water bowl near where she arrived
+    const tx = Math.floor((lehvi.x + TILE/2) / TILE);
+    const ty = Math.floor((lehvi.y + TILE/2) / TILE);
+    // Don't stack bowls
+    if (!foodBowls.find(b => b.tx === tx && b.ty === ty)) {
+      const bowlType = Math.random() < 0.5 ? 'food' : 'water';
+      foodBowls.push({ tx, ty, type: bowlType, amount: 5 });
+      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, bowlType === 'food' ? '#e67e22' : '#3498db', 5);
+      lehvi.saying = bowlType === 'food' ? "Here's some food!" : "Fresh water!";
+      lehvi.sayTimer = 2500;
+    }
+    lehvi.activity = 'wander';
+  }
+
+  lehvi.sayTimer -= dt;
+  if (lehvi.sayTimer <= 0 && Math.random() < 0.0015) {
+    const sayings = ["This is fun!", "Pretty flowers!", "Hi Miles!", "I love the farm!", "Look at the animals!", "Let's plant more!", "So peaceful here!", "Come on Midge!"];
+    lehvi.saying = sayings[Math.floor(Math.random() * sayings.length)];
+    lehvi.sayTimer = 3000;
+  }
+  if (lehvi.sayTimer <= 0) lehvi.saying = '';
+
+  // Crop growth
+  crops.forEach(crop => {
+    if (crop.watered && crop.growth < 3) {
+      const growSpeed = crop.waterLevel * 0.0005 + (weather.type === 'rain' ? 0.0005 : 0);
+      crop.growthProgress = (crop.growthProgress || 0) + dt * growSpeed;
+      if (crop.growthProgress >= 1) {
+        crop.growth = Math.min(crop.growth + 1, 3);
+        crop.growthProgress = 0;
+        if (crop.growth < 3) crop.watered = false;
+      }
+    }
+  });
+
+  // Rain waters crops
+  if (weather.type === 'rain') {
+    crops.forEach(crop => {
+      if (!crop.watered && Math.random() < 0.001 * dt) {
+        crop.watered = true;
+        crop.waterLevel = Math.min(crop.waterLevel + 1, 3);
+      }
+    });
+  }
+
+  // Weather system
+  weather.timer -= dt;
+  if (weather.timer <= 0) {
+    if (weather.type === 'sunny' && Math.random() < 0.3) {
+      weather.type = 'cloudy';
+      weather.timer = 8000 + Math.random() * 10000;
+    } else if (weather.type === 'cloudy' && Math.random() < 0.5) {
+      weather.type = 'rain';
+      weather.timer = 10000 + Math.random() * 15000;
+      playRain();
+    } else {
+      weather.type = 'sunny';
+      weather.timer = 15000 + Math.random() * 20000;
+    }
+    document.getElementById('info-weather').textContent = 'Weather: ' + weather.type.charAt(0).toUpperCase() + weather.type.slice(1);
+  }
+
+  // Rain particles
+  if (weather.type === 'rain') {
+    for (let i = 0; i < 3; i++) {
+      weather.raindrops.push({
+        x: camera.x + Math.random() * canvas.width,
+        y: camera.y - 20,
+        speed: 4 + Math.random() * 3
+      });
+    }
+    if (Math.random() < 0.005) playRain();
+  }
+  weather.raindrops = weather.raindrops.filter(r => {
+    r.y += r.speed;
+    return r.y < camera.y + canvas.height;
+  });
+  weather.cloudX += 0.2;
+  if (weather.cloudX > MAP_W * TILE + 200) weather.cloudX = -200;
+
+  // Animals wander / get attracted to food bowls
+  animals.forEach(a => {
+    if (!a.eating) a.eating = 0;
+    if (a.eating > 0) { a.eating -= dt; a.frame = (a.frame + 0.005 * dt) % 2; return; }
+
+    // Check for nearby food bowls - animals are attracted to them
+    let attracted = false;
+    const detectRange = TILE * 5;
+    for (const bowl of foodBowls) {
+      if (bowl.amount <= 0) continue;
+      const bx = bowl.tx * TILE;
+      const by = bowl.ty * TILE;
+      const bdx = bx - a.x;
+      const bdy = by - a.y;
+      const bdist = Math.sqrt(bdx*bdx + bdy*bdy);
+      if (bdist < detectRange) {
+        attracted = true;
+        if (bdist < TILE * 0.8) {
+          // Eating!
+          a.eating = 2000;
+          bowl.amount -= 1;
+          if (a.type === 'pig') playOink();
+          else if (a.type === 'cow') playMoo();
+        } else {
+          // Move toward bowl
+          const speed = 0.6;
+          a.x += (bdx/bdist) * speed;
+          a.y += (bdy/bdist) * speed;
+          if (Math.abs(bdx) > Math.abs(bdy)) a.dir = bdx > 0 ? 2 : 1;
+          else a.dir = bdy > 0 ? 0 : 3;
+        }
+        break;
+      }
+    }
+
+    if (!attracted) {
+      a.timer += dt;
+      if (a.timer > 2000 + Math.random() * 3000) {
+        a.dir = Math.floor(Math.random() * 4);
+        a.timer = 0;
+        if (a.type === 'rooster') {
+          a.crowTimer = (a.crowTimer || 0) + 1;
+          if (a.crowTimer >= 3) { playRooster(); a.crowTimer = 0; }
+        }
+        if (a.type === 'pig' && Math.random() < 0.3) playOink();
+        if (a.type === 'cow' && Math.random() < 0.2) playMoo();
+      }
+      const speed = 0.3;
+      let ax = a.x, ay = a.y;
+      if (a.dir === 0) ay += speed;
+      else if (a.dir === 1) ax -= speed;
+      else if (a.dir === 2) ax += speed;
+      else ay -= speed;
+      const atx = Math.floor((ax + TILE/2) / TILE);
+      const aty = Math.floor((ay + TILE/2) / TILE);
+      if (atx >= 1 && atx < MAP_W-1 && aty >= 1 && aty < MAP_H-1) {
+        const t = tiles[aty][atx];
+        if (t !== 'fence' && t !== 'water' && t !== 'barn') {
+          a.x = ax; a.y = ay;
+        }
+      }
+    }
+    a.frame = (a.frame + (dt > 0 ? 0.003 * dt : 0)) % 2;
+  });
+
+  // Remove empty food bowls
+  foodBowls = foodBowls.filter(b => b.amount > 0);
+
+  // Particles
+  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life--; });
+  particles = particles.filter(p => p.life > 0);
+
+  // Ambient sounds
+  ambientTimer += dt;
+  if (ambientTimer > 15000 && Math.random() < 0.01) {
+    const sounds = [playRooster, playMoo, playOink];
+    sounds[Math.floor(Math.random() * sounds.length)]();
+    ambientTimer = 0;
+  }
+
+  // UI updates
+  document.getElementById('info-crops').textContent = 'Crops: ' + crops.length;
+  // Build harvested display with icons
+  let harvestText = 'Harvested: ' + harvestedCount;
+  const harvestEntries = Object.entries(harvestedCrops).filter(([k,v]) => v > 0);
+  if (harvestEntries.length > 0) {
+    harvestText += '\n' + harvestEntries.map(([k,v]) => CROPS[k].emoji + ' ' + v).join('  ');
+  }
+  document.getElementById('info-harvested').textContent = harvestText;
+
+  // Speech bubbles
+  updateBubble('bubble-ted', ted, camera);
+  updateBubble('bubble-midge', midge, camera);
+  updateBubble('bubble-lehvi', lehvi, camera);
+}
+
+function updateBubble(id, entity, cam) {
+  const el = document.getElementById(id);
+  if (entity.saying) {
+    el.textContent = entity.saying;
+    el.style.opacity = '1';
+    el.style.left = (entity.x - cam.x - 20) + 'px';
+    el.style.top = (entity.y - cam.y - 50) + 'px';
+  } else {
+    el.style.opacity = '0';
+  }
+}
+
+// ============ DRAW ============
+function draw() {
+  const scene = SCENES[currentScene];
+  ctx.fillStyle = scene.sky;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+
+  // Draw tiles
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const px = x * TILE;
+      const py = y * TILE;
+      const tile = tiles[y][x];
+
+      if (tile === 'grass') {
+        ctx.fillStyle = scene.grass;
+        ctx.fillRect(px, py, TILE, TILE);
+        // Grass tufts
+        if ((x + y) % 3 === 0) {
+          ctx.fillStyle = '#5da832';
+          ctx.fillRect(px + 10, py + 15, 3, 8);
+          ctx.fillRect(px + 30, py + 25, 3, 7);
+        }
+      }
+      else if (tile === 'dirt') {
+        ctx.fillStyle = scene.dirt;
+        ctx.fillRect(px, py, TILE, TILE);
+        // Dirt texture
+        ctx.fillStyle = 'rgba(0,0,0,0.05)';
+        for (let i = 0; i < 3; i++) {
+          ctx.fillRect(px + ((x*7+i*13)%40), py + ((y*11+i*17)%40), 4, 2);
+        }
+      }
+      else if (tile === 'path') {
+        ctx.fillStyle = '#d4b896';
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = 'rgba(0,0,0,0.05)';
+        ctx.fillRect(px + 5, py + 5, 6, 3);
+        ctx.fillRect(px + 25, py + 30, 8, 3);
+      }
+      else if (tile === 'fence') {
+        ctx.fillStyle = scene.grass;
+        ctx.fillRect(px, py, TILE, TILE);
+        // Fence posts
+        ctx.fillStyle = '#8B6914';
+        ctx.fillRect(px + 2, py + 5, 6, TILE - 10);
+        ctx.fillRect(px + TILE - 8, py + 5, 6, TILE - 10);
+        ctx.fillStyle = '#a0802a';
+        ctx.fillRect(px, py + 12, TILE, 5);
+        ctx.fillRect(px, py + 28, TILE, 5);
+      }
+      else if (tile === 'barn') {
+        ctx.fillStyle = '#c0392b';
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = '#922b21';
+        ctx.fillRect(px, py, TILE, 6);
+        // Barn door / window
+        if (x === 3 && y === 3) {
+          ctx.fillStyle = '#5a2d0c';
+          ctx.fillRect(px + 12, py + 10, 24, 38);
+        }
+        // White trim
+        ctx.fillStyle = '#ecf0f1';
+        ctx.fillRect(px + 18, py + 8, 12, 2);
+      }
+      else if (tile === 'water') {
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        const wave = Math.sin(Date.now() / 500 + x + y) * 3;
+        ctx.fillRect(px + 8 + wave, py + 15, 20, 3);
+        ctx.fillRect(px + 12 + wave, py + 28, 16, 2);
+      }
+      else if (tile === 'pen') {
+        ctx.fillStyle = '#c8b078';
+        ctx.fillRect(px, py, TILE, TILE);
+        // Hay texture
+        ctx.fillStyle = '#d4c090';
+        ctx.fillRect(px+5, py+10, 15, 2);
+        ctx.fillRect(px+25, py+30, 12, 2);
+      }
+    }
+  }
+
+  // Draw crops
+  crops.forEach(crop => {
+    const px = crop.tx * TILE;
+    const py = crop.ty * TILE;
+    const info = CROPS[crop.type];
+    const stage = info.stages[Math.min(crop.growth, 3)];
+
+    // Watered soil indicator
+    if (crop.watered) {
+      ctx.fillStyle = 'rgba(52, 152, 219, 0.2)';
+      ctx.fillRect(px + 4, py + 4, TILE - 8, TILE - 8);
+    }
+
+    ctx.font = crop.growth >= 2 ? '28px serif' : '20px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(stage, px + TILE/2, py + TILE/2);
+  });
+
+  // Draw food/water bowls
+  foodBowls.forEach(b => {
+    ctx.font = '20px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const bx = b.tx * TILE + TILE/2;
+    const by = b.ty * TILE + TILE/2;
+    ctx.fillText(b.type === 'food' ? '🥣' : '💧', bx, by);
+    // Show depletion
+    if (b.amount < 3) {
+      ctx.globalAlpha = 0.4;
+      ctx.fillText(b.type === 'food' ? '🥣' : '💧', bx, by);
+      ctx.globalAlpha = 1;
+    }
+  });
+
+  // Draw animals (bigger - same size as dog)
+  animals.forEach(a => {
+    const bounce = Math.sin(Date.now() / 200 + a.x) * 2;
+    const bigSize = (a.type === 'cow' || a.type === 'horse') ? '38px' : '32px';
+    ctx.font = bigSize + ' serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let emoji;
+    switch(a.type) {
+      case 'chicken': emoji = '🐔'; break;
+      case 'rooster': emoji = '🐓'; break;
+      case 'pig': emoji = '🐷'; break;
+      case 'cow': emoji = '🐄'; break;
+      case 'sheep': emoji = '🐑'; break;
+      case 'horse': emoji = '🐴'; break;
+      case 'goat': emoji = '🐐'; break;
+      case 'duck': emoji = '🦆'; break;
+      default: emoji = '🐔';
+    }
+    ctx.fillText(emoji, a.x + TILE/2, a.y + TILE/2 + bounce);
+    // Show happy hearts when eating
+    if (a.eating && a.eating > 0) {
+      ctx.font = '14px serif';
+      ctx.fillText('❤️', a.x + TILE/2 + 12, a.y + bounce - 4);
+    }
+  });
+
+  // Draw Ted the green tractor
+  drawTed(ted.x, ted.y, ted.dir);
+
+  // Draw Midge the dog
+  drawMidge(midge.x, midge.y, midge.dir, midge.frame);
+
+  // Draw farmer (and vehicle)
+  // Draw Lehvi
+  drawLehvi(lehvi.x, lehvi.y, lehvi.dir, lehvi.frame);
+
+  drawFarmer(farmer.x, farmer.y, farmer.dir, farmer.frame);
+
+  // Particles
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.life / 50;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // Rain drops (in world space)
+  if (weather.type === 'rain') {
+    ctx.strokeStyle = 'rgba(100,149,237,0.4)';
+    ctx.lineWidth = 1;
+    weather.raindrops.forEach(r => {
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y);
+      ctx.lineTo(r.x - 1, r.y + 10);
+      ctx.stroke();
+    });
+  }
+
+  ctx.restore();
+
+  // Clouds and rain overlay (screen space, after ctx.restore)
+  if (weather.type === 'rain' || weather.type === 'cloudy') {
+    const cOffset = (weather.cloudX % (canvas.width + 400)) - 200;
+    drawCloud(cOffset, 30);
+    drawCloud(cOffset + 300, 50);
+    drawCloud(cOffset + 600, 20);
+    if (weather.type !== 'rain') {
+      drawCloud(cOffset + 150, 60);
+    }
+  }
+
+  if (weather.type === 'rain') {
+    // Subtle dark overlay in screen space (not accumulating)
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // Sky elements (fixed to screen)
+  if (weather.type === 'sunny') {
+    // Sun
+    ctx.fillStyle = '#f9ca24';
+    ctx.beginPath();
+    ctx.arc(canvas.width - 80, 50, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f6e58d';
+    ctx.beginPath();
+    ctx.arc(canvas.width - 80, 50, 25, 0, Math.PI * 2);
+    ctx.fill();
+    // Sun rays
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + Date.now() / 5000;
+      ctx.strokeStyle = 'rgba(249,202,36,0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width - 80 + Math.cos(angle) * 35, 50 + Math.sin(angle) * 35);
+      ctx.lineTo(canvas.width - 80 + Math.cos(angle) * 48, 50 + Math.sin(angle) * 48);
+      ctx.stroke();
+    }
+  }
+
+  // Virtual joystick for touch devices
+  drawJoystick();
+}
+
+function drawCloud(x, y) {
+  ctx.fillStyle = weather.type === 'rain' ? 'rgba(120,120,120,0.7)' : 'rgba(220,220,220,0.6)';
+  ctx.beginPath();
+  ctx.arc(x, y, 25, 0, Math.PI * 2);
+  ctx.arc(x + 25, y - 10, 30, 0, Math.PI * 2);
+  ctx.arc(x + 50, y, 25, 0, Math.PI * 2);
+  ctx.arc(x + 25, y + 5, 28, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawHat(px, py, hatType) {
+  if (hatType === 'none') return;
+  const cx = px + TILE/2;
+  const top = py - 2;
+  switch(hatType) {
+    case 'cowboy':
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(cx - 16, top + 2, 32, 4); // brim
+      ctx.fillStyle = '#a0802a';
+      ctx.fillRect(cx - 8, top - 8, 16, 12); // crown
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(cx - 6, top - 6, 12, 2); // band
+      break;
+    case 'straw':
+      ctx.fillStyle = '#f0d58c';
+      ctx.fillRect(cx - 15, top + 2, 30, 3); // brim
+      ctx.fillStyle = '#e8c862';
+      ctx.beginPath();
+      ctx.arc(cx, top, 10, Math.PI, 0);
+      ctx.fill();
+      // ribbon
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(cx - 10, top - 1, 20, 3);
+      break;
+    case 'cap':
+      ctx.fillStyle = '#2980b9';
+      ctx.beginPath();
+      ctx.arc(cx, top + 2, 10, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(cx, top + 0, 14, 4); // visor
+      break;
+    case 'tophat':
+      ctx.fillStyle = '#2c3e50';
+      ctx.fillRect(cx - 14, top + 2, 28, 3); // brim
+      ctx.fillRect(cx - 8, top - 14, 16, 18); // tall crown
+      ctx.fillStyle = '#5d6d7e';
+      ctx.fillRect(cx - 8, top - 2, 16, 2); // band
+      break;
+    case 'crown':
+      ctx.fillStyle = '#f4d03f';
+      ctx.fillRect(cx - 10, top - 4, 20, 8);
+      // points
+      ctx.beginPath();
+      ctx.moveTo(cx - 10, top - 4);
+      ctx.lineTo(cx - 8, top - 10);
+      ctx.lineTo(cx - 4, top - 4);
+      ctx.lineTo(cx, top - 12);
+      ctx.lineTo(cx + 4, top - 4);
+      ctx.lineTo(cx + 8, top - 10);
+      ctx.lineTo(cx + 10, top - 4);
+      ctx.fill();
+      // gems
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(cx, top - 1, 2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#3498db';
+      ctx.beginPath();
+      ctx.arc(cx - 6, top - 1, 1.5, 0, Math.PI*2);
+      ctx.arc(cx + 6, top - 1, 1.5, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case 'beanie':
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(cx, top + 2, 11, Math.PI, 0);
+      ctx.fill();
+      // fold
+      ctx.fillStyle = '#c0392b';
+      ctx.fillRect(cx - 11, top, 22, 4);
+      // pom pom
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(cx, top - 8, 4, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case 'witch':
+      ctx.fillStyle = '#2c3e50';
+      ctx.fillRect(cx - 14, top + 2, 28, 3); // brim
+      // cone
+      ctx.beginPath();
+      ctx.moveTo(cx - 10, top + 2);
+      ctx.lineTo(cx + 2, top - 22);
+      ctx.lineTo(cx + 10, top + 2);
+      ctx.fill();
+      // band
+      ctx.fillStyle = '#8e44ad';
+      ctx.fillRect(cx - 8, top - 2, 16, 3);
+      break;
+    case 'santa':
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.moveTo(cx - 10, top + 2);
+      ctx.quadraticCurveTo(cx, top - 16, cx + 14, top - 8);
+      ctx.lineTo(cx + 10, top + 2);
+      ctx.fill();
+      // white trim
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cx - 11, top, 22, 4);
+      // pom pom
+      ctx.beginPath();
+      ctx.arc(cx + 14, top - 8, 4, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case 'party':
+      // cone
+      ctx.fillStyle = '#9b59b6';
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, top + 2);
+      ctx.lineTo(cx, top - 16);
+      ctx.lineTo(cx + 8, top + 2);
+      ctx.fill();
+      // stripes
+      ctx.fillStyle = '#f4d03f';
+      ctx.fillRect(cx - 5, top - 4, 10, 3);
+      ctx.fillRect(cx - 3, top - 10, 6, 3);
+      // pom
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(cx, top - 16, 3, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    case 'helmet':
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(cx, top + 2, 12, Math.PI, 0);
+      ctx.fill();
+      // cross
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cx - 1, top - 6, 3, 8);
+      ctx.fillRect(cx - 4, top - 3, 9, 3);
+      break;
+    case 'pirate':
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath();
+      ctx.arc(cx, top, 12, Math.PI + 0.3, -0.3);
+      ctx.fill();
+      // skull
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(cx, top - 3, 4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#2c3e50';
+      ctx.fillRect(cx - 2, top - 4, 1.5, 1.5);
+      ctx.fillRect(cx + 1, top - 4, 1.5, 1.5);
+      break;
+  }
+}
+
+function drawFarmer(x, y, dir, frame) {
+  const px = x;
+  const py = y;
+
+  // Vehicle if driving
+  if (currentVehicle !== 'walking') {
+    if (currentVehicle === 'tractor') {
+      // Blue tractor
+      ctx.fillStyle = '#2980b9';
+      ctx.fillRect(px - 4, py - 4, TILE + 8, TILE + 8);
+      ctx.fillStyle = '#1a5276';
+      ctx.fillRect(px, py + TILE - 6, TILE, 6);
+      // Wheels
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath();
+      ctx.arc(px + 8, py + TILE + 2, 7, 0, Math.PI*2);
+      ctx.arc(px + TILE - 8, py + TILE + 2, 9, 0, Math.PI*2);
+      ctx.fill();
+    } else if (currentVehicle === 'harvester') {
+      ctx.fillStyle = '#d4a017';
+      ctx.fillRect(px - 8, py - 4, TILE + 16, TILE + 8);
+      ctx.fillStyle = '#b8860b';
+      ctx.fillRect(px - 12, py + TILE/2 - 4, TILE + 24, 8);
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath();
+      ctx.arc(px + 6, py + TILE + 2, 8, 0, Math.PI*2);
+      ctx.arc(px + TILE - 6, py + TILE + 2, 8, 0, Math.PI*2);
+      ctx.fill();
+    } else if (currentVehicle === 'truck') {
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(px - 4, py - 4, TILE + 8, TILE + 12);
+      ctx.fillStyle = '#c0392b';
+      ctx.fillRect(px - 4, py + TILE - 2, TILE + 8, 10);
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath();
+      ctx.arc(px + 6, py + TILE + 10, 6, 0, Math.PI*2);
+      ctx.arc(px + TILE - 6, py + TILE + 10, 6, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // Farmer body
+  const legOffset = Math.sin(frame * Math.PI / 2) * 3;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(px + TILE/2, py + TILE - 2, 12, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs (blue overalls)
+  ctx.fillStyle = '#3498db';
+  ctx.fillRect(px + 16 + legOffset, py + 28, 6, 14);
+  ctx.fillRect(px + 26 - legOffset, py + 28, 6, 14);
+
+  // Boots
+  ctx.fillStyle = '#795548';
+  ctx.fillRect(px + 15 + legOffset, py + 40, 8, 5);
+  ctx.fillRect(px + 25 - legOffset, py + 40, 8, 5);
+
+  // Body (overalls)
+  ctx.fillStyle = '#3498db';
+  ctx.fillRect(px + 14, py + 18, 20, 14);
+
+  // Shirt
+  ctx.fillStyle = '#e74c3c';
+  ctx.fillRect(px + 14, py + 14, 20, 8);
+
+  // Arms
+  ctx.fillStyle = '#fdd9b5';
+  if (dir === 1) {
+    ctx.fillRect(px + 8, py + 16, 6, 10);
+    ctx.fillRect(px + 34, py + 18, 6, 8);
+  } else if (dir === 2) {
+    ctx.fillRect(px + 34, py + 16, 6, 10);
+    ctx.fillRect(px + 8, py + 18, 6, 8);
+  } else {
+    ctx.fillRect(px + 10, py + 16, 6, 10);
+    ctx.fillRect(px + 32, py + 16, 6, 10);
+  }
+
+  // Head
+  ctx.fillStyle = '#fdd9b5';
+  ctx.beginPath();
+  ctx.arc(px + TILE/2, py + 12, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Blond hair
+  ctx.fillStyle = '#f4d03f';
+  ctx.beginPath();
+  ctx.arc(px + TILE/2, py + 8, 10, Math.PI, 0);
+  ctx.fill();
+  // Hair sides
+  ctx.fillRect(px + 14, py + 4, 4, 8);
+  ctx.fillRect(px + 30, py + 4, 4, 8);
+
+  // Face
+  if (dir !== 3) { // not facing away
+    // Eyes
+    ctx.fillStyle = '#2c3e50';
+    ctx.fillRect(px + 20, py + 10, 3, 3);
+    ctx.fillRect(px + 27, py + 10, 3, 3);
+    // Smile
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(px + TILE/2, py + 14, 4, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+  }
+
+  // Hat
+  drawHat(px, py, milesHat);
+
+  // Tool indicator
+  if (currentTool === 'water') {
+    ctx.fillStyle = '#3498db';
+    ctx.fillRect(px + 36, py + 4, 10, 14);
+    ctx.fillRect(px + 34, py + 2, 14, 4);
+  } else if (currentTool === 'plant') {
+    ctx.fillStyle = '#27ae60';
+    ctx.font = '14px serif';
+    ctx.fillText('🌱', px + 36, py + 14);
+  } else if (currentTool === 'harvest') {
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(px + 38, py, 3, 20);
+    ctx.beginPath();
+    ctx.moveTo(px + 38, py);
+    ctx.lineTo(px + 48, py + 6);
+    ctx.lineTo(px + 38, py + 8);
+    ctx.fillStyle = '#aaa';
+    ctx.fill();
+  }
+}
+
+function drawTed(x, y, dir) {
+  const px = x;
+  const py = y;
+
+  // Ted is a green tractor
+  ctx.fillStyle = '#27ae60';
+  ctx.fillRect(px + 4, py + 8, TILE - 8, TILE - 12);
+
+  // Cabin
+  ctx.fillStyle = '#2ecc71';
+  ctx.fillRect(px + 10, py + 4, TILE - 20, 16);
+
+  // Window
+  ctx.fillStyle = '#85c1e9';
+  ctx.fillRect(px + 14, py + 6, TILE - 28, 10);
+
+  // Wheels
+  ctx.fillStyle = '#2c3e50';
+  ctx.beginPath();
+  ctx.arc(px + 12, py + TILE - 4, 8, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px + TILE - 12, py + TILE - 4, 10, 0, Math.PI*2);
+  ctx.fill();
+
+  // Wheel rims
+  ctx.fillStyle = '#7f8c8d';
+  ctx.beginPath();
+  ctx.arc(px + 12, py + TILE - 4, 3, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px + TILE - 12, py + TILE - 4, 4, 0, Math.PI*2);
+  ctx.fill();
+
+  // Exhaust pipe
+  ctx.fillStyle = '#555';
+  ctx.fillRect(px + 6, py + 2, 4, 8);
+
+  // Exhaust puff
+  if (Math.random() < 0.3) {
+    ctx.fillStyle = 'rgba(200,200,200,0.4)';
+    ctx.beginPath();
+    ctx.arc(px + 8, py - 4 - Math.random()*8, 4 + Math.random()*3, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Name label
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('TED', px + TILE/2, py + TILE + 12);
+}
+
+function drawMidge(x, y, dir, frame) {
+  const px = x;
+  const py = y;
+  const bounce = Math.abs(Math.sin(frame * Math.PI / 2)) * 2;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  ctx.beginPath();
+  ctx.ellipse(px + TILE/2, py + TILE - 6, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body (small brown dog)
+  ctx.fillStyle = '#a0522d';
+  ctx.beginPath();
+  ctx.ellipse(px + TILE/2, py + TILE/2 + 6 - bounce, 12, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#b5651d';
+  ctx.beginPath();
+  ctx.arc(px + TILE/2 + (dir === 2 ? 8 : dir === 1 ? -8 : 0), py + TILE/2 - 2 - bounce, 7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears
+  ctx.fillStyle = '#8B4513';
+  const headX = px + TILE/2 + (dir === 2 ? 8 : dir === 1 ? -8 : 0);
+  ctx.beginPath();
+  ctx.ellipse(headX - 5, py + TILE/2 - 6 - bounce, 3, 5, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(headX + 5, py + TILE/2 - 6 - bounce, 3, 5, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  if (dir !== 3) {
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(headX - 3, py + TILE/2 - 3 - bounce, 1.5, 0, Math.PI*2);
+    ctx.arc(headX + 3, py + TILE/2 - 3 - bounce, 1.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Nose
+  ctx.fillStyle = '#333';
+  ctx.beginPath();
+  ctx.arc(headX, py + TILE/2 - bounce, 2, 0, Math.PI*2);
+  ctx.fill();
+
+  // Tail (wagging)
+  const tailWag = Math.sin(Date.now() / 100) * 0.5;
+  ctx.strokeStyle = '#a0522d';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(px + TILE/2 + (dir === 1 ? 10 : dir === 2 ? -10 : 0), py + TILE/2 + 4 - bounce);
+  ctx.quadraticCurveTo(
+    px + TILE/2 + (dir === 1 ? 18 : dir === 2 ? -18 : 8) + Math.sin(tailWag) * 5,
+    py + TILE/2 - 4 - bounce,
+    px + TILE/2 + (dir === 1 ? 16 : dir === 2 ? -16 : 6),
+    py + TILE/2 - 8 - bounce + Math.sin(tailWag) * 4
+  );
+  ctx.stroke();
+
+  // Legs
+  ctx.fillStyle = '#8B4513';
+  const legBounce = Math.sin(frame * Math.PI) * 2;
+  ctx.fillRect(px + TILE/2 - 8, py + TILE/2 + 10 - bounce, 3, 8 + legBounce);
+  ctx.fillRect(px + TILE/2 - 2, py + TILE/2 + 10 - bounce, 3, 8 - legBounce);
+  ctx.fillRect(px + TILE/2 + 4, py + TILE/2 + 10 - bounce, 3, 8 + legBounce);
+  ctx.fillRect(px + TILE/2 + 8, py + TILE/2 + 10 - bounce, 3, 8 - legBounce);
+
+  // Name label
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('MIDGE', px + TILE/2, py + TILE + 14);
+}
+
+function drawLehvi(x, y, dir, frame) {
+  const px = x;
+  const py = y;
+  const legOffset = Math.sin(frame * Math.PI / 2) * 3;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(px + TILE/2, py + TILE - 2, 12, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs
+  ctx.fillStyle = '#e8a0c0';
+  ctx.fillRect(px + 16 + legOffset, py + 30, 5, 12);
+  ctx.fillRect(px + 27 - legOffset, py + 30, 5, 12);
+
+  // Shoes (purple)
+  ctx.fillStyle = '#9b59b6';
+  ctx.fillRect(px + 15 + legOffset, py + 40, 7, 5);
+  ctx.fillRect(px + 26 - legOffset, py + 40, 7, 5);
+
+  // Dress (purple/pink)
+  ctx.fillStyle = '#af7ac5';
+  ctx.beginPath();
+  ctx.moveTo(px + 14, py + 18);
+  ctx.lineTo(px + 34, py + 18);
+  ctx.lineTo(px + 38, py + 34);
+  ctx.lineTo(px + 10, py + 34);
+  ctx.closePath();
+  ctx.fill();
+
+  // Dress top
+  ctx.fillStyle = '#d2a4e8';
+  ctx.fillRect(px + 15, py + 14, 18, 8);
+
+  // Arms
+  ctx.fillStyle = '#fdd9b5';
+  if (dir === 1) {
+    ctx.fillRect(px + 9, py + 16, 5, 10);
+    ctx.fillRect(px + 34, py + 18, 5, 8);
+  } else if (dir === 2) {
+    ctx.fillRect(px + 34, py + 16, 5, 10);
+    ctx.fillRect(px + 9, py + 18, 5, 8);
+  } else {
+    ctx.fillRect(px + 10, py + 16, 5, 10);
+    ctx.fillRect(px + 33, py + 16, 5, 10);
+  }
+
+  // Head
+  ctx.fillStyle = '#fdd9b5';
+  ctx.beginPath();
+  ctx.arc(px + TILE/2, py + 12, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Long golden hair (flowing down)
+  ctx.fillStyle = '#f4d03f';
+  // Top of hair
+  ctx.beginPath();
+  ctx.arc(px + TILE/2, py + 8, 11, Math.PI, 0);
+  ctx.fill();
+  // Hair sides - long, going down past shoulders
+  ctx.fillRect(px + 12, py + 4, 5, 22);
+  ctx.fillRect(px + 31, py + 4, 5, 22);
+
+  // Braid (on the right side, hanging down)
+  ctx.fillStyle = '#d4a017';
+  ctx.strokeStyle = '#d4a017';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(px + 34, py + 20);
+  ctx.quadraticCurveTo(px + 38, py + 28, px + 35, py + 36);
+  ctx.stroke();
+  // Braid segments (zigzag pattern)
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#e6b817';
+  for (let i = 0; i < 4; i++) {
+    const by = py + 22 + i * 4;
+    ctx.beginPath();
+    ctx.moveTo(px + 33, by);
+    ctx.lineTo(px + 37, by + 2);
+    ctx.stroke();
+  }
+  // Braid tie (little bow)
+  ctx.fillStyle = '#e74c3c';
+  ctx.beginPath();
+  ctx.arc(px + 35, py + 37, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Face
+  if (dir !== 3) {
+    // Eyes (slightly larger, friendly)
+    ctx.fillStyle = '#2c3e50';
+    ctx.beginPath();
+    ctx.arc(px + 20, py + 10, 2, 0, Math.PI * 2);
+    ctx.arc(px + 28, py + 10, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rosy cheeks
+    ctx.fillStyle = 'rgba(255, 150, 150, 0.3)';
+    ctx.beginPath();
+    ctx.arc(px + 17, py + 14, 3, 0, Math.PI * 2);
+    ctx.arc(px + 31, py + 14, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Smile
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(px + TILE/2, py + 14, 4, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+  }
+
+  // Hat
+  drawHat(px, py, lehviHat);
+
+  // Watering can if she's watering
+  if (lehvi.activity === 'water') {
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(px + 36, py + 8, 8, 10);
+    ctx.fillRect(px + 34, py + 6, 12, 3);
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(px + 44, py + 10, 6, 2);
+  }
+  // Bowl if she's feeding
+  if (lehvi.activity === 'feed') {
+    ctx.font = '16px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🥣', px + 38, py + 14);
+  }
+
+  // Name label
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('LEHVI', px + TILE/2, py + TILE + 14);
+}
+
+// ============ GAME LOOP ============
+function gameLoop(timestamp) {
+  const dt = lastTime ? timestamp - lastTime : 16;
+  lastTime = timestamp;
+
+  update(dt);
+  draw();
+
+  requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+
+// Touch/mobile controls - virtual joystick
+let joystick = { active: false, startX: 0, startY: 0, touchId: null };
+let actionTouch = { active: false, touchId: null };
+
+// Detect touch device
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+// Draw joystick on canvas
+function drawJoystick() {
+  if (!isTouchDevice) return;
+  // Always show joystick base on touch devices (bottom-left)
+  const baseX = 100;
+  const baseY = canvas.height - 120;
+  const baseR = 50;
+
+  // Base circle
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(baseX, baseY, baseR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Thumb circle
+  let thumbX = baseX;
+  let thumbY = baseY;
+  if (joystick.active) {
+    const dx = joystick.currentX - joystick.startX;
+    const dy = joystick.currentY - joystick.startY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const maxDist = baseR;
+    if (dist > maxDist) {
+      thumbX = baseX + (dx/dist) * maxDist;
+      thumbY = baseY + (dy/dist) * maxDist;
+    } else {
+      thumbX = baseX + dx;
+      thumbY = baseY + dy;
+    }
+  }
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(thumbX, thumbY, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Action button (bottom-right) - does spacebar action
+  const actX = canvas.width - 80;
+  const actY = canvas.height - 120;
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#f4d03f';
+  ctx.beginPath();
+  ctx.arc(actX, actY, 35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('DO', actX, actY);
+  ctx.restore();
+}
+
+canvas.addEventListener('touchstart', (e) => {
+  ensureAudio();
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    // Left half = joystick
+    if (t.clientX < canvas.width / 2) {
+      joystick.active = true;
+      joystick.startX = t.clientX;
+      joystick.startY = t.clientY;
+      joystick.currentX = t.clientX;
+      joystick.currentY = t.clientY;
+      joystick.touchId = t.identifier;
+    }
+    // Right side bottom = action button
+    else if (t.clientY > canvas.height - 180 && t.clientX > canvas.width - 140) {
+      actionTouch.active = true;
+      actionTouch.touchId = t.identifier;
+      // Trigger spacebar-like action
+      const tx = Math.floor((farmer.x + TILE/2) / TILE);
+      const ty = Math.floor((farmer.y + TILE/2) / TILE);
+      if (currentTool === 'plant' && tiles[ty][tx] === 'dirt' && !crops.find(c => c.tx === tx && c.ty === ty)) {
+        crops.push({ tx, ty, type: selectedSeed, growth: 0, watered: false, waterLevel: 0, planted: Date.now() });
+        playPlant();
+        addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#8B4513', 5);
+      } else if (currentTool === 'water') {
+        const crop = crops.find(c => c.tx === tx && c.ty === ty);
+        if (crop && crop.growth < 3) {
+          crop.watered = true;
+          crop.waterLevel = Math.min(crop.waterLevel + 1, 3);
+          playWater();
+          addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#3498db', 8);
+        }
+      } else if (currentTool === 'harvest') {
+        const idx = crops.findIndex(c => c.tx === tx && c.ty === ty && c.growth >= 3);
+        if (idx >= 0) {
+          harvestedCount++;
+          const ht = crops[idx].type;
+          harvestedCrops[ht] = (harvestedCrops[ht] || 0) + 1;
+          addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, CROPS[ht].color, 10);
+          crops.splice(idx, 1);
+          playHarvest();
+        }
+      } else if (currentTool === 'animal') {
+        const tt = tiles[ty][tx];
+        if (tt === 'pen' || tt === 'grass' || tt === 'dirt' || tt === 'path') {
+          animals.push({ type: selectedAnimal, x: tx * TILE, y: ty * TILE, dir: Math.floor(Math.random()*4), timer: 0, frame: 0 });
+          addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#ffeaa7', 6);
+        }
+      }
+    }
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === joystick.touchId) {
+      joystick.currentX = t.clientX;
+      joystick.currentY = t.clientY;
+      const dx = joystick.currentX - joystick.startX;
+      const dy = joystick.currentY - joystick.startY;
+      keys['arrowleft'] = dx < -15;
+      keys['arrowright'] = dx > 15;
+      keys['arrowup'] = dy < -15;
+      keys['arrowdown'] = dy > 15;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === joystick.touchId) {
+      joystick.active = false;
+      joystick.touchId = null;
+      keys['arrowleft'] = keys['arrowright'] = keys['arrowup'] = keys['arrowdown'] = false;
+    }
+    if (t.identifier === actionTouch.touchId) {
+      actionTouch.active = false;
+      actionTouch.touchId = null;
+    }
+  }
+});
+
+// Keyboard shortcuts for tools
+window.addEventListener('keydown', (e) => {
+  if (e.key === '1') setTool('plant');
+  if (e.key === '2') setTool('water');
+  if (e.key === '3') setTool('harvest');
+  if (e.key === '4') setTool('animal');
+  if (e.key === ' ') {
+    e.preventDefault();
+    // Quick action at farmer position
+    const tx = Math.floor((farmer.x + TILE/2) / TILE);
+    const ty = Math.floor((farmer.y + TILE/2) / TILE);
+    if (currentTool === 'plant' && tiles[ty][tx] === 'dirt' && !crops.find(c => c.tx === tx && c.ty === ty)) {
+      crops.push({ tx, ty, type: selectedSeed, growth: 0, watered: false, waterLevel: 0, planted: Date.now() });
+      playPlant();
+      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#8B4513', 5);
+    } else if (currentTool === 'water') {
+      const crop = crops.find(c => c.tx === tx && c.ty === ty);
+      if (crop && crop.growth < 3) {
+        crop.watered = true;
+        crop.waterLevel = Math.min(crop.waterLevel + 1, 3);
+        playWater();
+        addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#3498db', 8);
+      }
+    } else if (currentTool === 'harvest') {
+      const idx = crops.findIndex(c => c.tx === tx && c.ty === ty && c.growth >= 3);
+      if (idx >= 0) {
+        harvestedCount++;
+        const ht2 = crops[idx].type;
+        harvestedCrops[ht2] = (harvestedCrops[ht2] || 0) + 1;
+        addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, CROPS[ht2].color, 10);
+        crops.splice(idx, 1);
+        playHarvest();
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
