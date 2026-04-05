@@ -236,6 +236,7 @@ canvas { display: block; }
       <button class="btn" id="btn-harvest" onclick="setTool('harvest')">Harvest</button>
       <button class="btn" id="btn-animal" onclick="setTool('animal')">Add Animal</button>
       <button class="btn" onclick="toggleHats()">Hats</button>
+      <button class="btn" onclick="switchCharacter()">Switch</button>
       <button class="btn" onclick="toggleSound()">Sound</button>
     </div>
   </div>
@@ -252,11 +253,13 @@ canvas { display: block; }
   <div id="info-crops">Crops: 0</div>
   <div id="info-harvested">Harvested: 0</div>
   <div id="info-vehicle">Walking</div>
+  <div id="info-character">Playing: Miles (Tab to switch)</div>
 </div>
 
 <div class="speech-bubble" id="bubble-ted"></div>
 <div class="speech-bubble" id="bubble-midge"></div>
 <div class="speech-bubble" id="bubble-lehvi"></div>
+<div class="speech-bubble" id="bubble-farmer"></div>
 
 <script>
 // ============ AUDIO SYSTEM ============
@@ -486,9 +489,35 @@ let lehvi = {
   activity: 'wander' // wander, water, follow
 };
 
+// Character switching
+let controlledCharacter = 'miles'; // 'miles' or 'lehvi'
+// AI fields for farmer (used when player controls Lehvi)
+farmer.moveTimer = 0;
+farmer.targetX = farmer.x;
+farmer.targetY = farmer.y;
+farmer.activity = 'wander';
+farmer.sayTimer = 0;
+farmer.saying = '';
+
 // Keys
 const keys = {};
-window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; ensureAudio(); });
+window.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    controlledCharacter = controlledCharacter === 'miles' ? 'lehvi' : 'miles';
+    // Reset AI timers so the newly-AI character picks a fresh activity
+    if (controlledCharacter === 'miles') {
+      lehvi.moveTimer = 0;
+      lehvi.activity = 'wander';
+    } else {
+      farmer.moveTimer = 0;
+      farmer.activity = 'wander';
+    }
+    document.getElementById('info-character').textContent = 'Playing: ' + (controlledCharacter === 'miles' ? 'Miles' : 'Lehvi');
+    return;
+  }
+  keys[e.key.toLowerCase()] = true; ensureAudio();
+});
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 // ============ INIT MAP ============
@@ -620,6 +649,18 @@ function buildVehicleSelector() {
   });
 }
 buildVehicleSelector();
+
+function switchCharacter() {
+  controlledCharacter = controlledCharacter === 'miles' ? 'lehvi' : 'miles';
+  if (controlledCharacter === 'miles') {
+    lehvi.moveTimer = 0;
+    lehvi.activity = 'wander';
+  } else {
+    farmer.moveTimer = 0;
+    farmer.activity = 'wander';
+  }
+  document.getElementById('info-character').textContent = 'Playing: ' + (controlledCharacter === 'miles' ? 'Miles' : 'Lehvi');
+}
 
 function toggleScenes() {
   showScenes = !showScenes;
@@ -758,37 +799,38 @@ let engineTimer = 0;
 function update(dt) {
   const scene = SCENES[currentScene];
 
-  // Farmer movement
+  // Player-controlled character movement
+  const controlled = controlledCharacter === 'miles' ? farmer : lehvi;
   let dx = 0, dy = 0;
-  if (keys['arrowleft'] || keys['a']) { dx = -1; farmer.dir = 1; }
-  if (keys['arrowright'] || keys['d']) { dx = 1; farmer.dir = 2; }
-  if (keys['arrowup'] || keys['w']) { dy = -1; farmer.dir = 3; }
-  if (keys['arrowdown'] || keys['s']) { dy = 1; farmer.dir = 0; }
+  if (keys['arrowleft'] || keys['a']) { dx = -1; controlled.dir = 1; }
+  if (keys['arrowright'] || keys['d']) { dx = 1; controlled.dir = 2; }
+  if (keys['arrowup'] || keys['w']) { dy = -1; controlled.dir = 3; }
+  if (keys['arrowdown'] || keys['s']) { dy = 1; controlled.dir = 0; }
 
   if (dx !== 0 || dy !== 0) {
     const len = Math.sqrt(dx*dx + dy*dy);
     dx /= len; dy /= len;
-    const nx = farmer.x + dx * farmer.speed;
-    const ny = farmer.y + dy * farmer.speed;
+    const nx = controlled.x + dx * controlled.speed;
+    const ny = controlled.y + dy * controlled.speed;
     const ntx = Math.floor((nx + TILE/2) / TILE);
     const nty = Math.floor((ny + TILE/2) / TILE);
     if (ntx >= 1 && ntx < MAP_W-1 && nty >= 1 && nty < MAP_H-1 && tiles[nty][ntx] !== 'fence' && tiles[nty][ntx] !== 'water') {
-      farmer.x = nx;
-      farmer.y = ny;
+      controlled.x = nx;
+      controlled.y = ny;
     }
-    farmer.frameTimer += dt;
-    if (farmer.frameTimer > 150) { farmer.frame = (farmer.frame + 1) % 4; farmer.frameTimer = 0; }
+    controlled.frameTimer += dt;
+    if (controlled.frameTimer > 150) { controlled.frame = (controlled.frame + 1) % 4; controlled.frameTimer = 0; }
 
-    // Tractor engine sound
-    if (currentVehicle !== 'walking') {
+    // Tractor engine sound (only when controlling Miles with vehicle)
+    if (controlledCharacter === 'miles' && currentVehicle !== 'walking') {
       engineTimer += dt;
       if (engineTimer > 500) { playTractorEngine(); engineTimer = 0; }
     }
   }
 
-  // Camera follow
-  camera.x = farmer.x - canvas.width / 2 + TILE / 2;
-  camera.y = farmer.y - canvas.height / 2 + TILE / 2;
+  // Camera follows controlled character
+  camera.x = controlled.x - canvas.width / 2 + TILE / 2;
+  camera.y = controlled.y - canvas.height / 2 + TILE / 2;
   camera.x = Math.max(0, Math.min(camera.x, MAP_W * TILE - canvas.width));
   camera.y = Math.max(0, Math.min(camera.y, MAP_H * TILE - canvas.height));
 
@@ -816,9 +858,10 @@ function update(dt) {
   }
   if (ted.sayTimer <= 0) ted.saying = '';
 
-  // Midge the dog follows farmer
-  const mdx = farmer.x - midge.x;
-  const mdy = farmer.y - midge.y;
+  // Midge the dog follows controlled character
+  const midgeTarget = controlledCharacter === 'miles' ? farmer : lehvi;
+  const mdx = midgeTarget.x - midge.x;
+  const mdy = midgeTarget.y - midge.y;
   const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
   if (mdist > midge.followDist) {
     midge.x += (mdx/mdist) * midge.speed;
@@ -836,91 +879,189 @@ function update(dt) {
   }
   if (midge.barkTimer <= 0) midge.saying = '';
 
-  // Lehvi AI - she wanders around the farm, sometimes waters crops, sometimes follows farmer
-  lehvi.moveTimer += dt;
-  if (lehvi.moveTimer > 4000) {
-    // Pick new activity
-    const roll = Math.random();
-    if (roll < 0.3) {
-      lehvi.activity = 'wander';
-      lehvi.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
-      lehvi.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
-    } else if (roll < 0.5) {
-      lehvi.activity = 'follow';
-    } else if (roll < 0.7 && animals.length > 0) {
-      // Feed animals - go near animals and place food/water
-      const animal = animals[Math.floor(Math.random() * animals.length)];
-      lehvi.activity = 'feed';
-      lehvi.targetX = animal.x;
-      lehvi.targetY = animal.y;
-    } else {
-      // Try to water an unwatered crop
-      const unwatered = crops.filter(c => !c.watered && c.growth < 3);
-      if (unwatered.length > 0) {
-        const crop = unwatered[Math.floor(Math.random() * unwatered.length)];
-        lehvi.activity = 'water';
-        lehvi.targetX = crop.tx * TILE;
-        lehvi.targetY = crop.ty * TILE;
-      } else {
+  // Lehvi AI - only when not player-controlled
+  if (controlledCharacter !== 'lehvi') {
+    lehvi.moveTimer += dt;
+    if (lehvi.moveTimer > 4000) {
+      const roll = Math.random();
+      if (roll < 0.3) {
         lehvi.activity = 'wander';
         lehvi.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
         lehvi.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
+      } else if (roll < 0.5) {
+        lehvi.activity = 'follow';
+      } else if (roll < 0.7 && animals.length > 0) {
+        const animal = animals[Math.floor(Math.random() * animals.length)];
+        lehvi.activity = 'feed';
+        lehvi.targetX = animal.x;
+        lehvi.targetY = animal.y;
+      } else {
+        const unwatered = crops.filter(c => !c.watered && c.growth < 3);
+        if (unwatered.length > 0) {
+          const crop = unwatered[Math.floor(Math.random() * unwatered.length)];
+          lehvi.activity = 'water';
+          lehvi.targetX = crop.tx * TILE;
+          lehvi.targetY = crop.ty * TILE;
+        } else {
+          lehvi.activity = 'wander';
+          lehvi.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
+          lehvi.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
+        }
       }
+      lehvi.moveTimer = 0;
     }
-    lehvi.moveTimer = 0;
+
+    let lehviTargetX = lehvi.targetX;
+    let lehviTargetY = lehvi.targetY;
+    if (lehvi.activity === 'follow') {
+      lehviTargetX = farmer.x + TILE * 1.5;
+      lehviTargetY = farmer.y + TILE * 0.5;
+    }
+
+    const ldx = lehviTargetX - lehvi.x;
+    const ldy = lehviTargetY - lehvi.y;
+    const ldist = Math.sqrt(ldx*ldx + ldy*ldy);
+    if (ldist > 8) {
+      lehvi.x += (ldx/ldist) * lehvi.speed;
+      lehvi.y += (ldy/ldist) * lehvi.speed;
+      if (Math.abs(ldx) > Math.abs(ldy)) lehvi.dir = ldx > 0 ? 2 : 1;
+      else lehvi.dir = ldy > 0 ? 0 : 3;
+      lehvi.frameTimer += dt;
+      if (lehvi.frameTimer > 150) { lehvi.frame = (lehvi.frame + 1) % 4; lehvi.frameTimer = 0; }
+    } else if (lehvi.activity === 'water') {
+      const tx = Math.floor((lehvi.x + TILE/2) / TILE);
+      const ty = Math.floor((lehvi.y + TILE/2) / TILE);
+      const crop = crops.find(c => c.tx === tx && c.ty === ty && !c.watered && c.growth < 3);
+      if (crop) {
+        crop.watered = true;
+        crop.waterLevel = Math.min(crop.waterLevel + 1, 3);
+        addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#3498db', 6);
+        playWater();
+      }
+      lehvi.activity = 'wander';
+    } else if (lehvi.activity === 'feed') {
+      const tx = Math.floor((lehvi.x + TILE/2) / TILE);
+      const ty = Math.floor((lehvi.y + TILE/2) / TILE);
+      if (!foodBowls.find(b => b.tx === tx && b.ty === ty)) {
+        const bowlType = Math.random() < 0.5 ? 'food' : 'water';
+        foodBowls.push({ tx, ty, type: bowlType, amount: 5 });
+        addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, bowlType === 'food' ? '#e67e22' : '#3498db', 5);
+        lehvi.saying = bowlType === 'food' ? "Here's some food!" : "Fresh water!";
+        lehvi.sayTimer = 2500;
+      }
+      lehvi.activity = 'wander';
+    }
+
+    lehvi.sayTimer -= dt;
+    if (lehvi.sayTimer <= 0 && Math.random() < 0.0015) {
+      const sayings = ["This is fun!", "Pretty flowers!", "Hi Miles!", "I love the farm!", "Look at the animals!", "Let's plant more!", "So peaceful here!", "Come on Midge!"];
+      lehvi.saying = sayings[Math.floor(Math.random() * sayings.length)];
+      lehvi.sayTimer = 3000;
+    }
+    if (lehvi.sayTimer <= 0) lehvi.saying = '';
   }
 
-  let lehviTargetX = lehvi.targetX;
-  let lehviTargetY = lehvi.targetY;
-  if (lehvi.activity === 'follow') {
-    lehviTargetX = farmer.x + TILE * 1.5;
-    lehviTargetY = farmer.y + TILE * 0.5;
+  // Farmer AI - only when not player-controlled
+  if (controlledCharacter !== 'miles') {
+    farmer.moveTimer += dt;
+    if (farmer.moveTimer > 4000) {
+      const roll = Math.random();
+      if (roll < 0.3) {
+        farmer.activity = 'wander';
+        farmer.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
+        farmer.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
+      } else if (roll < 0.5) {
+        farmer.activity = 'follow';
+      } else if (roll < 0.8) {
+        const unwatered = crops.filter(c => !c.watered && c.growth < 3);
+        if (unwatered.length > 0) {
+          const crop = unwatered[Math.floor(Math.random() * unwatered.length)];
+          farmer.activity = 'water';
+          farmer.targetX = crop.tx * TILE;
+          farmer.targetY = crop.ty * TILE;
+        } else {
+          farmer.activity = 'wander';
+          farmer.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
+          farmer.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
+        }
+      } else {
+        const harvestable = crops.filter(c => c.growth >= 3);
+        if (harvestable.length > 0) {
+          const crop = harvestable[Math.floor(Math.random() * harvestable.length)];
+          farmer.activity = 'harvest';
+          farmer.targetX = crop.tx * TILE;
+          farmer.targetY = crop.ty * TILE;
+        } else {
+          farmer.activity = 'wander';
+          farmer.targetX = (3 + Math.floor(Math.random() * (MAP_W - 6))) * TILE;
+          farmer.targetY = (3 + Math.floor(Math.random() * (MAP_H - 6))) * TILE;
+        }
+      }
+      farmer.moveTimer = 0;
+    }
+
+    let farmerTargetX = farmer.targetX;
+    let farmerTargetY = farmer.targetY;
+    if (farmer.activity === 'follow') {
+      farmerTargetX = lehvi.x - TILE * 1.5;
+      farmerTargetY = lehvi.y + TILE * 0.5;
+    }
+
+    const fdx = farmerTargetX - farmer.x;
+    const fdy = farmerTargetY - farmer.y;
+    const fdist = Math.sqrt(fdx*fdx + fdy*fdy);
+    if (fdist > 8) {
+      farmer.x += (fdx/fdist) * farmer.speed;
+      farmer.y += (fdy/fdist) * farmer.speed;
+      if (Math.abs(fdx) > Math.abs(fdy)) farmer.dir = fdx > 0 ? 2 : 1;
+      else farmer.dir = fdy > 0 ? 0 : 3;
+      farmer.frameTimer += dt;
+      if (farmer.frameTimer > 150) { farmer.frame = (farmer.frame + 1) % 4; farmer.frameTimer = 0; }
+    } else if (farmer.activity === 'water') {
+      const tx = Math.floor((farmer.x + TILE/2) / TILE);
+      const ty = Math.floor((farmer.y + TILE/2) / TILE);
+      const crop = crops.find(c => c.tx === tx && c.ty === ty && !c.watered && c.growth < 3);
+      if (crop) {
+        crop.watered = true;
+        crop.waterLevel = Math.min(crop.waterLevel + 1, 3);
+        addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#3498db', 6);
+        playWater();
+      }
+      farmer.activity = 'wander';
+    } else if (farmer.activity === 'harvest') {
+      const tx = Math.floor((farmer.x + TILE/2) / TILE);
+      const ty = Math.floor((farmer.y + TILE/2) / TILE);
+      const idx = crops.findIndex(c => c.tx === tx && c.ty === ty && c.growth >= 3);
+      if (idx >= 0) {
+        harvestedCount++;
+        const htype = crops[idx].type;
+        harvestedCrops[htype] = (harvestedCrops[htype] || 0) + 1;
+        addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, CROPS[htype].color, 10);
+        crops.splice(idx, 1);
+        playHarvest();
+      }
+      farmer.activity = 'wander';
+    }
+
+    farmer.sayTimer -= dt;
+    if (farmer.sayTimer <= 0 && Math.random() < 0.0015) {
+      const sayings = ["Nice day for farming!", "These crops look great!", "Hey Lehvi!", "Love this farm!", "Time to work!", "Looking good!", "Almost harvest time!"];
+      farmer.saying = sayings[Math.floor(Math.random() * sayings.length)];
+      farmer.sayTimer = 3000;
+    }
+    if (farmer.sayTimer <= 0) farmer.saying = '';
   }
 
-  const ldx = lehviTargetX - lehvi.x;
-  const ldy = lehviTargetY - lehvi.y;
-  const ldist = Math.sqrt(ldx*ldx + ldy*ldy);
-  if (ldist > 8) {
-    lehvi.x += (ldx/ldist) * lehvi.speed;
-    lehvi.y += (ldy/ldist) * lehvi.speed;
-    if (Math.abs(ldx) > Math.abs(ldy)) lehvi.dir = ldx > 0 ? 2 : 1;
-    else lehvi.dir = ldy > 0 ? 0 : 3;
-    lehvi.frameTimer += dt;
-    if (lehvi.frameTimer > 150) { lehvi.frame = (lehvi.frame + 1) % 4; lehvi.frameTimer = 0; }
-  } else if (lehvi.activity === 'water') {
-    // Water the crop she arrived at
-    const tx = Math.floor((lehvi.x + TILE/2) / TILE);
-    const ty = Math.floor((lehvi.y + TILE/2) / TILE);
-    const crop = crops.find(c => c.tx === tx && c.ty === ty && !c.watered && c.growth < 3);
-    if (crop) {
-      crop.watered = true;
-      crop.waterLevel = Math.min(crop.waterLevel + 1, 3);
-      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, '#3498db', 6);
-      playWater();
+  // Miles sayings when player-controlled
+  if (controlledCharacter === 'miles') {
+    farmer.sayTimer -= dt;
+    if (farmer.sayTimer <= 0 && Math.random() < 0.0012) {
+      const sayings = ["Nice day for farming!", "These crops look great!", "Hey Lehvi!", "Love this farm!", "Time to work!", "Looking good!", "Almost harvest time!", "What should we plant?", "Come on Midge!"];
+      farmer.saying = sayings[Math.floor(Math.random() * sayings.length)];
+      farmer.sayTimer = 3000;
     }
-    lehvi.activity = 'wander';
-  } else if (lehvi.activity === 'feed') {
-    // Place food or water bowl near where she arrived
-    const tx = Math.floor((lehvi.x + TILE/2) / TILE);
-    const ty = Math.floor((lehvi.y + TILE/2) / TILE);
-    // Don't stack bowls
-    if (!foodBowls.find(b => b.tx === tx && b.ty === ty)) {
-      const bowlType = Math.random() < 0.5 ? 'food' : 'water';
-      foodBowls.push({ tx, ty, type: bowlType, amount: 5 });
-      addParticles(tx * TILE + TILE/2, ty * TILE + TILE/2, bowlType === 'food' ? '#e67e22' : '#3498db', 5);
-      lehvi.saying = bowlType === 'food' ? "Here's some food!" : "Fresh water!";
-      lehvi.sayTimer = 2500;
-    }
-    lehvi.activity = 'wander';
+    if (farmer.sayTimer <= 0) farmer.saying = '';
   }
-
-  lehvi.sayTimer -= dt;
-  if (lehvi.sayTimer <= 0 && Math.random() < 0.0015) {
-    const sayings = ["This is fun!", "Pretty flowers!", "Hi Miles!", "I love the farm!", "Look at the animals!", "Let's plant more!", "So peaceful here!", "Come on Midge!"];
-    lehvi.saying = sayings[Math.floor(Math.random() * sayings.length)];
-    lehvi.sayTimer = 3000;
-  }
-  if (lehvi.sayTimer <= 0) lehvi.saying = '';
 
   // Crop growth
   crops.forEach(crop => {
@@ -1074,6 +1215,7 @@ function update(dt) {
   updateBubble('bubble-ted', ted, camera);
   updateBubble('bubble-midge', midge, camera);
   updateBubble('bubble-lehvi', lehvi, camera);
+  updateBubble('bubble-farmer', farmer, camera);
 }
 
 function updateBubble(id, entity, cam) {
@@ -1978,9 +2120,10 @@ canvas.addEventListener('touchstart', (e) => {
     else if (t.clientY > canvas.height - 180 && t.clientX > canvas.width - 140) {
       actionTouch.active = true;
       actionTouch.touchId = t.identifier;
-      // Trigger spacebar-like action
-      const tx = Math.floor((farmer.x + TILE/2) / TILE);
-      const ty = Math.floor((farmer.y + TILE/2) / TILE);
+      // Trigger spacebar-like action at controlled character position
+      const touchControlled = controlledCharacter === 'miles' ? farmer : lehvi;
+      const tx = Math.floor((touchControlled.x + TILE/2) / TILE);
+      const ty = Math.floor((touchControlled.y + TILE/2) / TILE);
       if (currentTool === 'plant' && tiles[ty][tx] === 'dirt' && !crops.find(c => c.tx === tx && c.ty === ty)) {
         crops.push({ tx, ty, type: selectedSeed, growth: 0, watered: false, waterLevel: 0, planted: Date.now() });
         playPlant();
@@ -2054,9 +2197,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '4') setTool('animal');
   if (e.key === ' ') {
     e.preventDefault();
-    // Quick action at farmer position
-    const tx = Math.floor((farmer.x + TILE/2) / TILE);
-    const ty = Math.floor((farmer.y + TILE/2) / TILE);
+    // Quick action at controlled character position
+    const spaceControlled = controlledCharacter === 'miles' ? farmer : lehvi;
+    const tx = Math.floor((spaceControlled.x + TILE/2) / TILE);
+    const ty = Math.floor((spaceControlled.y + TILE/2) / TILE);
     if (currentTool === 'plant' && tiles[ty][tx] === 'dirt' && !crops.find(c => c.tx === tx && c.ty === ty)) {
       crops.push({ tx, ty, type: selectedSeed, growth: 0, watered: false, waterLevel: 0, planted: Date.now() });
       playPlant();
